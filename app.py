@@ -2,154 +2,132 @@ import streamlit as st
 import pandas as pd
 import math
 
-# 1. إعدادات الصفحة وهوية النظام
-st.set_page_config(page_title="نظام الاختبارات الذكي", layout="wide", initial_sidebar_state="collapsed")
+# 1. إعدادات الصفحة الأساسية لمنع التداخل في الجوال
+st.set_page_config(page_title="نظام اللجان", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. كود التصميم المتقدم (CSS) لمحاكاة الصور التي أرفقتها
+# 2. كود CSS "قوي" لإعادة ضبط الواجهة للجوال تماماً ومنع التداخل
 st.markdown("""
     <style>
-    /* إخفاء العناصر غير المرغوبة */
-    #MainMenu, footer, header, .stDeployButton {visibility: hidden; display:none;}
+    /* إخفاء شعارات المنصة تماماً */
+    #MainMenu, footer, header, .stDeployButton {display:none; visibility: hidden;}
     
-    /* الخلفية والخطوط */
-    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+    /* إلغاء حواف Streamlit التي تسبب ضغط التصميم وتداخل الكلمات */
+    .block-container { padding: 0 !important; max-width: 100% !important; }
+    
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
+    
     html, body, [class*="css"] { 
         font-family: 'Tajawal', sans-serif; 
         direction: rtl; 
-        background-color: #f4f7f9; 
+        text-align: right; 
+        background-color: #f8f9fa; 
     }
 
-    /* الهيدر العلوي المتدرج مثل الصورة */
-    .main-header {
-        background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
-        color: white; padding: 30px; border-radius: 0 0 30px 30px;
-        text-align: center; margin: -60px -20px 30px -20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    /* الهيدر العلوي المتدرج مثل صورة مدرستي تماماً */
+    .custom-header {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        color: white; padding: 45px 20px;
+        border-radius: 0 0 45px 45px;
+        text-align: center; margin-bottom: 25px;
+        box-shadow: 0 6px 15px rgba(0,0,0,0.15);
     }
 
-    /* تصميم البطاقات الملونة (Grid System) */
-    .card-container {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 15px; margin: 20px 0;
+    /* حاوية البطاقات (Grid) تظهر 2 في كل صف بالجوال بشكل مرتب */
+    .grid-wrapper {
+        display: grid; 
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 15px; padding: 0 15px;
+        margin-bottom: 25px;
     }
-    .feature-card {
+
+    .stat-card {
         background: white; border-radius: 20px; padding: 20px;
-        text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        border-bottom: 5px solid #3b82f6; transition: 0.3s;
-    }
-    .feature-card:active { transform: scale(0.95); }
-    .icon-circle {
-        width: 50px; height: 50px; background: #eff6ff;
-        border-radius: 50%; display: flex; align-items: center;
-        justify-content: center; margin: 0 auto 10px auto; font-size: 24px;
+        text-align: center; box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+        border-bottom: 5px solid #3b82f6;
     }
 
-    /* تحسين شكل رفع الملفات */
-    .stFileUploader { background: white; border-radius: 20px; padding: 20px; border: 2px dashed #3b82f6; }
+    .icon-box { font-size: 32px; margin-bottom: 8px; }
 
-    /* تنسيق الطباعة (مخفي في العرض) */
+    /* تحسين شكل الجدول لمنع خروجه عن حدود الشاشة */
+    .stTable { width: 100% !important; border-radius: 15px; overflow: hidden; }
+    
+    /* تنسيق الطباعة (يبقى ثابتاً لورق A4) */
     @media print {
         .no-print { display: none !important; }
         @page { size: A4; margin: 0; }
         .label-grid { display: grid; grid-template-columns: repeat(3, 70mm); grid-template-rows: repeat(7, 42.3mm); }
-        .label-item { 
-            width: 70mm; height: 42.3mm; border: 0.1mm solid #eee;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
-        }
+        .label-box { width: 70mm; height: 42.3mm; border: 0.1mm solid #eee; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. الهيدر العلوي
+# 3. واجهة البرنامج العلوية (Header)
 st.markdown(f"""
-    <div class="main-header">
-        <h2 style="margin:0;">متوسطة وثانوية ...</h2>
-        <p style="opacity:0.8;">نظام إدارة لجان الاختبارات والتحضير</p>
+    <div class="custom-header">
+        <h2 style="margin:0; font-size: 24px;">نظام إدارة اللجان الذكي</h2>
+        <p style="margin:8px 0 0 0; opacity:0.9; font-size: 15px;">متوسطة وثانوية ...</p>
     </div>
     """, unsafe_allow_html=True)
 
-# 4. لوحة التحكم الجانبية (للإعدادات فقط)
-with st.sidebar:
-    st.image("https://upload.wikimedia.org/wikipedia/ar/8/bb/%D8%B4%D8%B9%D8%A7%D8%B1_%D9%88%D8%B2%D8%A7%D8%B1%D8%A9_%D8%A7%D9%84%D8%AA%D8%B9%D9%84%D9%8A%D9%85_%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9.png", width=100)
-    st.subheader("⚙️ ضبط النظام")
-    school_name = st.text_input("اسم المدرسة", "مدرسة فيصل بن فهد")
-    c_size = st.number_input("طلاب اللجنة", value=20)
-    s_no = st.number_input("بداية أرقام الجلوس", value=100)
-
-# 5. الواجهة الرئيسية (البطاقات التفاعلية)
-uploaded_file = st.file_uploader("📂 الخطوة الأولى: ارفع ملف الطلاب (Excel)", type=["xlsx"])
+# 4. منطقة رفع الملف (تصميم نظيف)
+st.markdown("<div style='padding:0 20px;'>", unsafe_allow_html=True)
+uploaded_file = st.file_uploader("📂 ارفع ملف الطلاب (Excel)", type=["xlsx"])
+st.markdown("</div>", unsafe_allow_html=True)
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
-    df['رقم الجلوس'] = range(s_no, s_no + len(df))
+    df['رقم الجلوس'] = range(101, 101 + len(df)) # بداية تلقائية لأرقام الجلوس
     
-    st.markdown("### 📊 مركز العمليات")
+    # 5. عرض البطاقات (2 في كل صف) كما في تصميمك المفضل
     st.markdown(f"""
-    <div class="card-container no-print">
-        <div class="feature-card">
-            <div class="icon-circle">👥</div>
-            <div style="font-weight:bold;">الطلاب</div>
-            <div style="color:#3b82f6; font-size:20px;">{len(df)}</div>
+    <div class="grid-wrapper no-print">
+        <div class="stat-card">
+            <div class="icon-box">👥</div>
+            <div style="font-size:13px; color:#666;">إجمالي الطلاب</div>
+            <div style="font-size:22px; font-weight:bold; color:#1e3a8a;">{len(df)}</div>
         </div>
-        <div class="feature-card">
-            <div class="icon-circle">🏫</div>
-            <div style="font-weight:bold;">اللجان</div>
-            <div style="color:#10b981; font-size:20px;">{math.ceil(len(df)/c_size)}</div>
-        </div>
-        <div class="feature-card">
-            <div class="icon-circle">📅</div>
-            <div style="font-weight:bold;">الحالة</div>
-            <div style="color:#f59e0b; font-size:14px;">جاهز للتوزيع</div>
+        <div class="stat-card">
+            <div class="icon-box">🏫</div>
+            <div style="font-size:13px; color:#666;">عدد اللجان</div>
+            <div style="font-size:22px; font-weight:bold; color:#10b981;">{math.ceil(len(df)/20)}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 🖨️ مركز الطباعة")
-    
-    # بطاقات الطباعة (أزرار تفاعلية)
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("📋 كشوف المناداة"):
-            st.session_state.mode = "list"
-    with col2:
-        if st.button("🏷️ ملصقات الطاولات"):
-            st.session_state.mode = "labels"
+    # 6. التبويبات (Tabs) لتقليل الزحمة في الجوال
+    st.markdown("<div style='padding: 0 20px;'>", unsafe_allow_html=True)
+    tab1, tab2 = st.tabs(["📋 الكشوفات", "🏷️ الملصقات"])
 
-    # عرض النتائج بناءً على الاختيار
-    if 'mode' in st.session_state:
-        if st.session_state.mode == "list":
-            for i in range(0, len(df), c_size):
-                chunk = df.iloc[i:i+c_size]
-                st.markdown(f"""
-                <div style="background:white; padding:20px; border-radius:15px; margin-bottom:10px; border:1px solid #ddd;">
-                    <h4 style="text-align:center;">كشف لجنة {int(i/c_size)+1}</h4>
-                    <table style="width:100%; text-align:center; border-collapse:collapse;">
-                        <tr style="background:#f3f4f6;"><th>الاسم</th><th>الجلوس</th></tr>
-                        {"".join([f"<tr><td>{r.iloc[0]}</td><td>{r['رقم الجلوس']}</td></tr>" for idx, r in chunk.iterrows()])}
-                    </table>
-                </div>
-                """, unsafe_allow_html=True)
-            st.button("🖨️ تأكيد طباعة الكشوف", on_click=None)
+    with tab1:
+        st.markdown("### 📍 معاينة اللجان")
+        for i in range(0, len(df), 20):
+            chunk = df.iloc[i:i+20]
+            with st.expander(f"اللجنة رقم {int(i/20)+1}"):
+                # عرض اسم الطالب والسجل فقط للتبسيط في الجوال
+                st.table(chunk.iloc[:, [0, 1]].rename(columns={chunk.columns[0]: 'الاسم', chunk.columns[1]: 'السجل'}))
 
-        elif st.session_state.mode == "labels":
-            st.warning("⚠️ الطباعة مصممة لورق A4 (3x7)")
-            if st.button("إرسال للطابعة"):
-                for p in range(0, len(df), 21):
-                    page = df.iloc[p:p+21]
-                    st.markdown('<div class="label-grid">', unsafe_allow_html=True)
-                    for idx, r in page.iterrows():
-                        st.markdown(f"""
-                        <div class="label-item">
-                            <div style="font-size: 8pt; color: #888;">{school_name}</div>
-                            <div style="font-size: 11pt; font-weight: bold;">{r.iloc[0]}</div>
-                            <div style="font-size: 10pt; color: #1e3a8a;">جلوس: {r["رقم الجلوس"]}</div>
-                            <div style="font-size: 9pt;">لجنة: {int(idx/c_size)+1}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    st.markdown('</div>', unsafe_allow_html=True)
+    with tab2:
+        st.info("الملصقات مصممة لورق A4 (3x7)")
+        if st.button("🖨️ بدء تجهيز الملصقات للطباعة"):
+            for p in range(0, len(df), 21):
+                page = df.iloc[p:p+21]
+                st.markdown('<div class="label-grid">', unsafe_allow_html=True)
+                for idx, r in page.iterrows():
+                    st.markdown(f"""
+                    <div class="label-box">
+                        <div style="font-size: 8pt; color: #888;">مدرسة ...</div>
+                        <div style="font-size: 11pt; font-weight: bold;">{r.iloc[0]}</div>
+                        <div style="font-size: 10pt; color: #1e3a8a;">جلوس: {r["رقم الجلوس"]}</div>
+                        <div style="font-size: 9pt;">لجنة: {int(idx/20)+1}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
 else:
+    # رسالة الترحيب بتصميم هادئ
     st.markdown("""
-    <div style="text-align:center; padding:50px; color:#999;">
-        <p>ارفع ملف Excel من نظام نور للبدء في توزيع اللجان تلقائياً</p>
+    <div style="margin:20px; padding:40px; background:white; border-radius:25px; text-align:center; border:1px solid #eee; color:#999;">
+        <p>يرجى رفع ملف Excel من نظام نور للبدء</p>
     </div>
     """, unsafe_allow_html=True)
